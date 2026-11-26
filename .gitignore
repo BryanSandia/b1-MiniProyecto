@@ -1,0 +1,12 @@
+# Archivos temporales de trabajo (no forman parte del entregable)
+/scala/
+/varios/
+
+# Artefactos de compilacion de Scala
+*.class
+*.log
+target/
+project/target/
+.bsp/
+.metals/
+.bloop/
