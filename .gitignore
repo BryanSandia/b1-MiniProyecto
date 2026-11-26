@@ -1,0 +1,8 @@
+# Artefactos de compilacion de Scala
+*.class
+*.log
+target/
+project/target/
+.bsp/
+.metals/
+.bloop/
