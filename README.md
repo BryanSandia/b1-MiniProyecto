@@ -1,84 +1,71 @@
 # 🔐 Mini Proyecto Scala — Higher Order Functions en Criptografía
 
-Motor de cifrado en **programación funcional pura** (Scala 3). El corazón del
-proyecto es `procesarMensaje`, una **función de orden superior** que recibe la
-estrategia de cifrado como parámetro `(Char, Int) => Char` y la aplica con `map`.
+> **Programación Funcional y Reactiva** | Primer Bimestre 2026  
+> **Autor:** Bryan Sandia  
+> **Fecha de entrega:** Semana 8
 
-## Algoritmos
+---
+
+## 📑 Tabla de Contenidos
+
+1. [Objetivos](#-objetivos)
+2. [Descripción del Proyecto](#-descripción-del-proyecto)
+3. [Algoritmos Implementados](#-algoritmos-implementados)
+4. [Desarrollo del Código](#-desarrollo-del-código)
+   - 4.1 [Cifrado César](#41-cifrado-césar)
+   - 4.2 [Cifrado XOR](#42-cifrado-xor)
+   - 4.3 [Función de Orden Superior `procesarMensaje`](#43-función-de-orden-superior-procesarmensaje)
+5. [Casos de Prueba y Resultados](#-casos-de-prueba-y-resultados)
+   - 5.1 [Caso César](#51-caso-césar)
+   - 5.2 [Caso XOR](#52-caso-xor)
+   - 5.3 [Manejo de Errores](#53-manejo-de-errores)
+6. [Preguntas de Reflexión](#-preguntas-de-reflexión)
+7. [Estructura del Repositorio](#-estructura-del-repositorio)
+8. [Cómo Ejecutar](#-cómo-ejecutar)
+
+---
+
+## 🎯 Objetivos
+
+- Aplicar los conocimientos sobre **funciones de orden superior** (Higher Order Functions).
+- Utilizar **funciones como parámetros** para definir estrategias de cifrado dinámicas.
+- Implementar operaciones de transformación sobre **colecciones inmutables** usando `map`.
+- Implementar un **manejo adecuado de excepciones y validación de datos** con `Try/Success/Failure`.
+
+---
+
+## 📖 Descripción del Proyecto
+
+El objetivo es crear un **motor de cifrado** que reciba una función de transformación como parámetro. Se implementan dos métodos de cifrado específicos:
+
+1. **Cifrado César (Desplazamiento):** Mueve cada letra del alfabeto un número fijo de posiciones.
+2. **Cifrado XOR (Lógico):** Aplica la operación *Exclusive OR* a nivel de bits entre el código ASCII del carácter y una clave numérica.
+
+El proyecto está desarrollado en **Scala 3**, usando programación funcional pura: sin variables mutables (`var`), sin ciclos imperativos (`for`/`while`), y con manejo de errores mediante `Try/Success/Failure`.
+
+---
+
+## 🔐 Algoritmos Implementados
 
 | Algoritmo | Fórmula | Soporte | Inverso |
 |-----------|---------|---------|---------|
 | **César** | `E(x, k) = (pos(x) + k) mod 26` | Solo mayúsculas `A-Z` | Se invierte el signo de la clave (`k → -k`) |
 | **XOR** | `E(x, k) = ASCII(x) ⊕ k` (operador `^`) | Cualquier carácter ASCII | Se re-aplica la misma clave con el mismo operador |
 
-Sin `var`, sin ciclos imperativos, funciones puras (mismo input ⇒ mismo output).
+---
 
-## Compilación y ejecución
+## 💻 Desarrollo del Código
 
-```bash
-scalac Criptografia.scala
-scala ejecutar   # punto de entrada @main
-```
+### 4.1 Cifrado César
 
-## Resultados de los casos de prueba (verificados)
+La función `cifradoCesar` recibe un carácter y una clave, y retorna un `Try[Char]`. Valida que el carácter sea una letra mayúscula `A-Z` y aplica la fórmula de desplazamiento con módulo positivo para soportar claves negativas (descifrado).
 
-### César
-```text
-Cifrado:    FUNCIONAL con k=3 -> IXQFLRQDO
-Descifrado: IXQFLRQDO con k=-3 -> FUNCIONAL
-Ejemplo:    AD con k=1 -> BE
-```
-
-### XOR
-```text
-Cifrado:    scala con k=5 -> vfdid
-Inverso:    vfdid con k=5 -> scala
-```
-(s'115^5=118 'v', c'99^5=102 'f', a'97^5=100 'd', l'108^5=105 'i', a'97^5=100 'd')
-
-### Manejo de errores (Try/Success/Failure)
-```text
-Fallo capturado: El mensaje esta vacio o es nulo            (cadena vacia)
-Fallo capturado: Clave excesivamente grande: 100000         (clave invalida)
-Fallo capturado: Caracter no soportado en Cesar: '0'        ("H0LA!")
-Fallo capturado: Clave invalida para XOR: 9999              (fuera de rango ASCII)
-```
-Ningún fallo rompe el programa: todos se capturan como `Failure` y se imprimen
-con pattern matching.
-
-## Preguntas de reflexión
-
-### 1. ¿Por qué XOR es su propia inversa y César no?
-
-XOR es una operación **involutiva**: `(a ⊕ k) ⊕ k = a ⊕ (k ⊕ k) = a ⊕ 0 = a`,
-porque todo bit XOR consigo mismo da 0. Cifrar y descifrar son literalmente la
-misma operación con la misma clave. César es una traslación aritmética en `Z₂₆`:
-`E(x,k) = (x+k) mod 26`, cuyo inverso es la resta `(y−k) mod 26`; para reutilizar
-la misma función hay que alimentar el **inverso aditivo** de la clave (`k → −k`).
-
-### 2. ¿Qué ventajas ofrece `map` sobre un bucle `for` tradicional?
-
-- **Pureza**: no requiere acumuladores mutables (`var`) ni índices; desaparecen
-  los errores off-by-one.
-- **Inyección de la estrategia**: al ser `map`, la función de cifrado
-  `(Char, Int) => Char` pasa como argumento — cambiar de César a XOR es cambiar
-  un parámetro, no reescribir un ciclo.
-- **Composibilidad**: el resultado encadena con `filter`, `foldLeft`, etc.
-- **Errores centralizados**: un solo `Try` envuelve toda la transformación.
-
-### 3. ¿Cómo ayuda el tipado estático al pasar funciones como argumentos?
-
-La firma `funcionCifrado: (Char, Int) => Char` obliga al compilador a verificar
-que toda función pasada reciba `Char`+`Int` y devuelva `Char` (si olvidamos el
-`.toChar` tras `^` y devolvemos `Int`, no compila). Combinado con
-`Try[ResultadoCifrado]`, el error es visible en el tipo y el llamador debe hacer
-matching sobre `Success/Failure`. En lenguajes dinámicos esos errores solo
-aparecerían en runtime.
-
-## Archivos
-
-```text
-.
-├── Criptografia.scala   # case class + funciones + @main con casos de prueba
-└── README.md
-```
+```scala
+def cifradoCesar(caracter: Char, clave: Int): Try[Char] = {
+  if (!caracter.isUpper || caracter < 'A' || caracter > 'Z')
+    Failure(new IllegalArgumentException(s"Caracter no soportado en Cesar: '$caracter'"))
+  else {
+    val pos = (caracter - 'A' + clave % 26 + 26) % 26
+    Success(('A' + pos).toChar)
+  }
+}
