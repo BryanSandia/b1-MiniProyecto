@@ -14,6 +14,8 @@ def cifradoCesar(caracter: Char, clave: Int): Try[Char] = {
 def cifradoXOR(caracter: Char, clave: Int): Try[Char] = {
   if (clave < 0 || clave > 127)
     Failure(new IllegalArgumentException(s"Clave invalida para XOR: $clave"))
+  else if (caracter > 127)
+    Failure(new IllegalArgumentException(s"Caracter no ASCII para XOR: '$caracter'"))
   else
     Success((caracter.toInt ^ clave).toChar)
 }
@@ -22,14 +24,12 @@ def cifradoXOR(caracter: Char, clave: Int): Try[Char] = {
 def procesarMensaje(mensaje: String, clave: Int, funcionCifrado: (Char, Int) => Try[Char]): Try[String] = {
   if (mensaje == null || mensaje.isEmpty)
     Failure(new IllegalArgumentException("El mensaje esta vacio o es nulo"))
-  else if (math.abs(clave) > 9999)
-    Failure(new IllegalArgumentException(s"Clave excesivamente grande: $clave"))
   else {
     val resultados = mensaje.map(c => funcionCifrado(c, clave))
-    if (resultados.exists(_.isFailure))
-      Failure(resultados.find(_.isFailure).get.failed.get)
-    else
-      Success(resultados.map(_.get).mkString)
+    resultados.collectFirst { case Failure(error) => error } match {
+      case Some(error) => Failure(error)
+      case None => Success(resultados.collect { case Success(caracter) => caracter }.mkString)
+    }
   }
 }
 
@@ -50,12 +50,46 @@ procesarMensaje("scala", 5, cifradoXOR).foreach(c => {
 
 // === MANEJO DE ERRORES ===
 println("\n=== MANEJO DE ERRORES ===")
-List(
-  procesarMensaje("", 3, cifradoCesar),
-  procesarMensaje("HOLA", 100000, cifradoCesar),
-  procesarMensaje("H0LA!", 3, cifradoCesar),
-  procesarMensaje("scala", 9999, cifradoXOR)
-).foreach {
-  case Success(r) => println(s"OK: $r")
-  case Failure(e) => println(s"Fallo: ${e.getMessage}")
+def comprobarFallo(nombre: String, resultado: Try[String], errorEsperado: String) = resultado match {
+  case Failure(error) if error.getMessage.contains(errorEsperado) =>
+    println(s"PRUEBA OK: $nombre -> ${error.getMessage}")
+  case Failure(error) =>
+    throw new AssertionError(s"$nombre produjo un error inesperado: ${error.getMessage}")
+  case Success(valor) =>
+    throw new AssertionError(s"$nombre debia fallar, pero devolvio: $valor")
 }
+
+def comprobarExito(nombre: String, resultado: Try[String], resultadoEsperado: String) = resultado match {
+  case Success(valor) if valor == resultadoEsperado =>
+    println(s"PRUEBA OK: $nombre -> $valor")
+  case Success(valor) =>
+    throw new AssertionError(s"$nombre devolvio '$valor' en lugar de '$resultadoEsperado'")
+  case Failure(error) =>
+    throw new AssertionError(s"$nombre fallo inesperadamente: ${error.getMessage}")
+}
+
+comprobarFallo(
+  "mensaje vacio",
+  procesarMensaje("", 3, cifradoCesar),
+  "vacio o es nulo"
+)
+comprobarExito(
+  "clave grande valida para Cesar",
+  procesarMensaje("HOLA", 100000, cifradoCesar),
+  "LSPE"
+)
+comprobarFallo(
+  "caracter no manejado por Cesar",
+  procesarMensaje("HOLA!", 3, cifradoCesar),
+  "Caracter no soportado en Cesar"
+)
+comprobarFallo(
+  "clave fuera del rango XOR",
+  procesarMensaje("scala", 100000, cifradoXOR),
+  "Clave invalida para XOR"
+)
+comprobarFallo(
+  "caracter fuera de ASCII para XOR",
+  procesarMensaje("ñ", 5, cifradoXOR),
+  "Caracter no ASCII para XOR"
+)
